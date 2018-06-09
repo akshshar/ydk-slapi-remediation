@@ -82,10 +82,6 @@ class YDKStaticRoute(object):
 
         self.sl_interface = SLInterface()
 
-        #self.event_thread = threading.Thread(target = self.wait_for_event)
-        #self.event_thread.daemon = True
-        #self.event_thread.start()
-
         self.slapi_intf_thread = threading.Thread(target = self.sl_interface.intf_listen_notifications)
         self.slapi_intf_thread.daemon = True
         self.slapi_intf_thread.start()
@@ -172,6 +168,5 @@ if __name__ == '__main__':
     signal.signal(signal.SIGTERM, partial(handler, ydk_static_route))
 
     # The process main thread does nothing but wait for signals
-    #signal.pause()
 
     ydk_static_route.wait_for_event()

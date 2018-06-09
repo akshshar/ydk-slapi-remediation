@@ -319,37 +319,3 @@ class SLInterface(object):
             sys.exit(0)
 
         return (os.environ['SERVER_IP'], int(os.environ['SERVER_PORT']))
-
-
-#EXIT_FLAG = False
-#POSIX signal handler to ensure we shutdown cleanly
-#def handler(sl_interface, signum, frame):
-#    global EXIT_FLAG
-
-#    if not EXIT_FLAG:
-#        EXIT_FLAG = True
-#        print "Unregistering..."
-#        sl_interface.intf_register(sl_common_types_pb2.SL_REGOP_UNREGISTER)
-#       # Exit and Kill any running GRPC threads.
-#        os._exit(0)
-
-
-#
-# Setup the GRPC channel with the server, and issue RPCs
-#
-#if __name__ == '__main__':
-
-    # Create SLInterface object to setup netconf and gRPC connections, and configure active path,
-    # before listening for interface events
-
-#    sl_interface = SLInterface()
-
-
-#    sl_interface.intf_listen_notifications()
-#    # Register our handler for keyboard interrupt and termination signals
-#    signal.signal(signal.SIGINT, partial(handler, sl_interface))
-#    signal.signal(signal.SIGTERM, partial(handler, sl_interface))
-
-    # The process main thread does nothing but wait for signals
-#    signal.pause()
-
