@@ -48,18 +48,36 @@ formatter = logging.Formatter(("%(asctime)s - %(name)s - "
 handler.setFormatter(formatter)
 logger.addHandler(handler)
 
-ACTIVE_PREFIX_DICT = { "prefix" : "15.1.1.0",
-                       "prefixlen" : 24,
-                       "next_hop_address" : "11.1.1.20",
-                       "outgoing_interface" : "GigabitEthernet0/0/0/0",
-                       "admin_distance" : 30}
+ACTIVE_PREFIX_DICT_LIST = [
+                              { "prefix" : "30.1.1.0",
+                                "prefixlen" : 24,
+                                "next_hop_address" : "11.1.1.20",
+                                "outgoing_interface" : "GigabitEthernet0/0/0/0",
+                                "admin_distance" : 30},
+                  
+                              { "prefix" : "40.1.1.0",
+                                "prefixlen" : 24,
+                                "next_hop_address" : "11.1.1.20",
+                                "outgoing_interface" : "GigabitEthernet0/0/0/0",
+                                "admin_distance" : 30}
+                          ] 
+                   
 
 
-BACKUP_PREFIX_DICT = { "prefix" : "15.1.1.0",
-                       "prefixlen" : 24,
-                       "next_hop_address" : "12.1.1.20",
-                       "outgoing_interface" : "GigabitEthernet0/0/0/1",
-                       "admin_distance" : 30}
+BACKUP_PREFIX_DICT_LIST = [
+                              { "prefix" : "30.1.1.0",
+                                "prefixlen" : 24,
+                                "next_hop_address" : "12.1.1.20",
+                                "outgoing_interface" : "GigabitEthernet0/0/0/1",
+                                "admin_distance" : 30},
+
+                              { "prefix" : "40.1.1.0",
+                                "prefixlen" : 24,
+                                "next_hop_address" : "12.1.1.20",
+                                "outgoing_interface" : "GigabitEthernet0/0/0/1",
+                                "admin_distance" : 30} 
+                          ]
+ 
 
 class YDKStaticRoute(object):
 
@@ -90,22 +108,24 @@ class YDKStaticRoute(object):
 
     def config_router_static(self,
                              router_static,
-                             prefix_dict):
-         
+                             prefix_dict_list):
+
         """Add config data to router_static object."""
         vrf_unicast = router_static.default_vrf.address_family.vrfipv4.vrf_unicast
-        vrf_prefix = vrf_unicast.vrf_prefixes.VrfPrefix()
-        vrf_prefix.prefix = prefix_dict["prefix"]
-        vrf_prefix.prefix_length = prefix_dict["prefixlen"]
-        vrf_next_hop_interface_name_next_hop_address = vrf_prefix.vrf_route.vrf_next_hop_table. \
-            VrfNextHopInterfaceNameNextHopAddress()
-        vrf_next_hop_interface_name_next_hop_address.next_hop_address = prefix_dict["next_hop_address"] 
-        vrf_next_hop_interface_name_next_hop_address.metric = prefix_dict["admin_distance"]
-        vrf_next_hop_interface_name_next_hop_address.interface_name = prefix_dict["outgoing_interface"]
-        vrf_prefix.vrf_route.vrf_next_hop_table.vrf_next_hop_interface_name_next_hop_address. \
-            append(vrf_next_hop_interface_name_next_hop_address)
-        vrf_unicast.vrf_prefixes.vrf_prefix.append(vrf_prefix)
 
+        for prefix_dict in prefix_dict_list:
+            vrf_prefix = vrf_unicast.vrf_prefixes.VrfPrefix()
+            vrf_prefix.prefix = prefix_dict["prefix"]
+            vrf_prefix.prefix_length = prefix_dict["prefixlen"]
+            vrf_next_hop_interface_name_next_hop_address = vrf_prefix.vrf_route.vrf_next_hop_table. \
+               VrfNextHopInterfaceNameNextHopAddress()
+            vrf_next_hop_interface_name_next_hop_address.next_hop_address = prefix_dict["next_hop_address"] 
+            vrf_next_hop_interface_name_next_hop_address.metric = prefix_dict["admin_distance"]
+            vrf_next_hop_interface_name_next_hop_address.interface_name = prefix_dict["outgoing_interface"]
+            vrf_prefix.vrf_route.vrf_next_hop_table.vrf_next_hop_interface_name_next_hop_address. \
+               append(vrf_next_hop_interface_name_next_hop_address)
+            vrf_unicast.vrf_prefixes.vrf_prefix.append(vrf_prefix)
+        
 
     def takeaction(self, path):
 
@@ -113,15 +133,40 @@ class YDKStaticRoute(object):
 
         crud = CRUDService() 
         if path == "active":
+            try:
+                router_static = xr_ip_static_cfg.RouterStatic()
+                self.config_router_static(router_static, BACKUP_PREFIX_DICT_LIST)
+                crud.delete(self.provider, router_static)
+            except:
+                print "No existing backup route configured, continue with activation of active path"
+               
             router_static = xr_ip_static_cfg.RouterStatic()
-            self.config_router_static(router_static, ACTIVE_PREFIX_DICT)
+            self.config_router_static(router_static, ACTIVE_PREFIX_DICT_LIST)
+            crud.create(self.provider, router_static)
+            print(10*new_line)
+        elif path == "backup":
+            try:
+                router_static = xr_ip_static_cfg.RouterStatic()
+                self.config_router_static(router_static, ACTIVE_PREFIX_DICT_LIST)
+                crud.delete(self.provider, router_static)
+            except:
+                print "No existing active route configured, continue with activation of backup path"
+
+            router_static = xr_ip_static_cfg.RouterStatic()
+            self.config_router_static(router_static, BACKUP_PREFIX_DICT_LIST)
             crud.create(self.provider, router_static)
             print(10*new_line)
         else:
-            router_static = xr_ip_static_cfg.RouterStatic()
-            self.config_router_static(router_static, BACKUP_PREFIX_DICT)
-            crud.create(self.provider, router_static)
-            print(10*new_line)
+            try:
+                router_static = xr_ip_static_cfg.RouterStatic()
+                self.config_router_static(router_static, BACKUP_PREFIX_DICT_LIST)
+                crud.delete(self.provider, router_static)
+
+                router_static = xr_ip_static_cfg.RouterStatic()
+                self.config_router_static(router_static, ACTIVE_PREFIX_DICT_LIST)
+                crud.delete(self.provider, router_static)
+            except:
+                print "Ignoring exceptions as we clean up"
 
     def wait_for_event(self):
        while True:
@@ -147,6 +192,8 @@ def handler(ydk_static_route, signum, frame):
         while not ydk_static_route.event_loop_done:
             break
 
+        print "Cleaning up"
+        ydk_static_route.takeaction("cleanup")
         print "Unregistering from the SLInterface vertical..."
         ydk_static_route.sl_interface.intf_register(sl_common_types_pb2.SL_REGOP_UNREGISTER)
         os._exit(0)
